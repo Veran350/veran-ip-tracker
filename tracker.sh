@@ -1,19 +1,29 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# VERAN IP TRACKER v5.0 - ULTIMATE EDITION
+# VERAN IP TRACKER v6.0 - MENU EDITION
 
-# INSTALL MISSING TOOLS
-if ! command -v socat &> /dev/null; then
-    echo "Installing socat..."
-    pkg install -y socat
-fi
+# INSTALL DEPENDENCIES
+pkg update -y
+pkg install -y socat curl jq
 
-if ! command -v curl &> /dev/null; then
-    echo "Installing curl..."
-    pkg install -y curl
-fi
+# CONFIG
+PORT=8080
+SECRET="happy"  # CHANGE THIS!
+LOG_FILE="ips.log"
+TRACKING_URL=""
 
-clear
-echo -e "\e[1;31m
+# COLORS
+RED='\033[1;31m'
+GREEN='\033[1;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[1;36m'
+NC='\033[0m'
+
+# CREATE LOG FILE
+touch $LOG_FILE
+
+show_banner() {
+  clear
+  echo -e "${RED}
  ██▒   █▓ ██▓ ██▀███   ▄████  ██▀███  ▓█████ 
 ▓██░   █▒▓██▒▓██ ▒ ██▒▒██▒  ██▒▓██ ▒ ██▒▓█   ▀ 
  ▓██  █▒░▒██▒▓██ ░▄█ ▒▒██░  ██▒▓██ ░▄█ ▒▒███   
@@ -23,33 +33,67 @@ echo -e "\e[1;31m
    ░ ░░   ▒ ░  ░▒ ░ ▒░  ░ ▒ ▒░   ░▒ ░ ▒░ ░ ░  ░
      ░░   ▒ ░  ░░   ░ ░ ░ ░ ▒    ░░   ░    ░   
       ░   ░     ░         ░ ░     ░        ░  ░
-\e[0m"
+${NC}"
+}
 
-# CONFIG
-PORT=8080
-SECRET="veran123"  # CHANGE THIS!
+start_tracker() {
+  echo -e "${GREEN}[+] Starting tracker on port ${PORT}${NC}"
+  TRACKING_URL="http://$(curl -s ifconfig.me):${PORT}/${SECRET}/$(date +%s)"
+  echo -e "${YELLOW}[+] Tracking URL: ${CYAN}${TRACKING_URL}${NC}"
+  echo -e "${YELLOW}[+] Press Ctrl+C to stop${NC}\n"
+  
+  while true; do
+    {
+      echo -e "HTTP/1.1 200 OK\r\nContent-Length: 9\r\n\r\nLoading..."
+      IP=$(echo $SOCAT_PEERADDR | cut -d':' -f4)
+      UA=$(grep -m 1 'User-Agent:' | sed 's/User-Agent: //')
+      TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+      
+      # Get geolocation
+      GEO=$(curl -s "https://ipapi.co/${IP}/json/")
+      COUNTRY=$(echo "$GEO" | jq -r '.country_name')
+      CITY=$(echo "$GEO" | jq -r '.city')
+      
+      # Log everything
+      echo "${TIMESTAMP} | ${IP} | ${UA} | ${CITY}, ${COUNTRY} | ${TRACKING_URL##*/}" >> $LOG_FILE
+      echo -e "${GREEN}[+] ${TIMESTAMP} - ${IP} from ${CITY}, ${COUNTRY}${NC}"
+    } | socat -d -d -lf /dev/null TCP-LISTEN:$PORT,reuseaddr,fork -
+  done
+}
 
-# CREATE LOG FILE IF NOT EXISTS
-touch ips.log
+view_logs() {
+  echo -e "\n${CYAN}=== CAPTURED DATA ===${NC}"
+  column -t -s '|' $LOG_FILE | head -n 20
+  echo -e "\n${YELLOW}View full logs: cat ${LOG_FILE}${NC}"
+}
 
-echo -e "\e[1;32m[+] Starting VERAN Tracker on port ${PORT}\e[0m"
-echo -e "\e[1;36m[+] Tracking URL: http://$(curl -s ifconfig.me):${PORT}/${SECRET}/any-id\e[0m"
-echo -e "\e[1;33m[+] View logs: tail -f ips.log\e[0m\n"
+generate_url() {
+  TRACKING_URL="http://$(curl -s ifconfig.me):${PORT}/${SECRET}/$(date +%s)"
+  echo -e "\n${GREEN}NEW TRACKING URL:${NC}"
+  echo -e "${CYAN}${TRACKING_URL}${NC}"
+  echo -e "\n${YELLOW}Correlation ID: ${TRACKING_URL##*/}${NC}"
+}
 
-while true; do
-  {
-    echo -e "HTTP/1.1 200 OK\r\nContent-Length: 9\r\n\r\nLoading..."
-    IP=$(echo $SOCAT_PEERADDR | cut -d':' -f4)
-    UA=$(grep -m 1 'User-Agent:' | sed 's/User-Agent: //')
-    TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+show_menu() {
+  while true; do
+    echo -e "\n${RED}VERAN IP TRACKER MENU${NC}"
+    echo -e "${GREEN}1. Generate Tracking URL"
+    echo -e "2. Start Tracker"
+    echo -e "3. View Logs"
+    echo -e "4. Exit${NC}"
     
-    # GET GEOLOCATION
-    GEO=$(curl -s "https://ipapi.co/${IP}/json/")
-    COUNTRY=$(echo "$GEO" | grep '"country_name":' | cut -d'"' -f4)
-    CITY=$(echo "$GEO" | grep '"city":' | cut -d'"' -f4)
+    read -p $'\n'"Select option (1-4): " choice
     
-    # LOG EVERYTHING
-    echo "${TIMESTAMP} | ${IP} | ${UA} | ${CITY}, ${COUNTRY}" >> ips.log
-    echo -e "\e[1;35m[+] ${TIMESTAMP} - ${IP} from ${CITY}, ${COUNTRY}\e[0m"
-  } | socat -d -d -lf /dev/null TCP-LISTEN:${PORT},reuseaddr,fork -
-done
+    case $choice in
+      1) generate_url ;;
+      2) start_tracker ;;
+      3) view_logs ;;
+      4) exit 0 ;;
+      *) echo -e "${RED}Invalid option!${NC}" ;;
+    esac
+  done
+}
+
+# MAIN
+show_banner
+show_menu
