@@ -1,12 +1,9 @@
-# 🚀 VERAN IP Tracker  
+# 🐍 VERAN Python IP Tracker
 
-## 💻 **Run in Termux**  
+## 🚀 **Termux Setup (Run Once)**
 ```bash
-# 1. Install requirements
-pkg update && pkg install nodejs git -y
-
-# 2. Clone & run (replace YOUR-USERNAME)
-git clone https://github.com/YOUR-USERNAME/veran-ip-tracker.git
-cd veran-ip-tracker
-npm install express geoip-lite
-node tracker.js
+termux-setup-storage
+pkg update -y
+pkg upgrade -y
+pkg install -y python git
+python -m pip install flask
