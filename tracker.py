@@ -1,44 +1,33 @@
-#!/data/data/com.termux/files/usr/bin/python3
-# VERAN IP TRACKER v3.0 - PYTHON EDITION
-import os
-from flask import Flask, request
-from datetime import datetime
+#!/data/data/com.termux/files/usr/bin/bash  
+# VERAN IP TRACKER v4.0 - BASH EDITION  
 
-app = Flask(__name__)
-PORT = 8080
-SECRET = "veran123"  # Change this!
+clear  
+echo -e "\e[1;31m  
+ ██▒   █▓ ██▓ ██▀███   ▄████  ██▀███  ▓█████  
+▓██░   █▒▓██▒▓██ ▒ ██▒▒██▒  ██▒▓██ ▒ ██▒▓█   ▀  
+ ▓██  █▒░▒██▒▓██ ░▄█ ▒▒██░  ██▒▓██ ░▄█ ▒▒███  
+  ▒██ █░░░██░▒██▀▀█▄  ▒██   ██░▒██▀▀█▄  ▒▓█  ▄  
+   ▒▀█░  ░██░░██▓ ▒██▒░ ████▓▒░░██▓ ▒██▒░▒████▒  
+   ░ ▐░  ░▓  ░ ▒▓ ░▒▓░░ ▒░▒░▒░ ░ ▒▓ ░▒▓░░░ ▒░ ░  
+   ░ ░░   ▒ ░  ░▒ ░ ▒░  ░ ▒ ▒░   ░▒ ░ ▒░ ░ ░  ░  
+     ░░   ▒ ░  ░░   ░ ░ ░ ░ ▒    ░░   ░    ░  
+      ░   ░     ░         ░ ░     ░        ░  ░  
+\e[0m"  
 
-print(r"""
- __   __  _______  __    _  ___   _______ 
-|  |_|  ||       ||  |  | ||   | |       |
-|       ||   _   ||   |_| ||   | |  _____|
-|       ||  | |  ||       ||   | | |_____ 
-|       ||  |_|  ||  _    ||   | |_____  |
-| ||_|| ||       || | |   ||   |  _____| |
-|_|   |_||_______||_|  |__||___| |_______|
-""")
+# CONFIG  
+PORT=8080  
+SECRET="happy"  # CHANGE THIS!  
 
-print(f"[+] Python IP Tracker Ready")
-print(f"[+] Tracking URL: http://YOUR-IP:{PORT}/{SECRET}/any-id")
-print(f"[+] View Data: cat ips.txt\n")
+echo -e "\e[1;32m[+] Starting VERAN Tracker on port ${PORT}\e[0m"  
+echo -e "\e[1;36m[+] Tracking URL: http://$(curl -s ifconfig.me):${PORT}/${SECRET}/any-id\e[0m"  
+echo -e "\e[1;33m[+] Logs: tail -f ips.log\e[0m\n"  
 
-@app.route(f'/{SECRET}/<id>')
-def track(id):
-    ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    log = {
-        'id': id,
-        'ip': ip,
-        'time': timestamp,
-        'user_agent': request.user_agent.string,
-    }
-    
-    with open('ips.txt', 'a') as f:
-        f.write(f"{log}\n")
-    
-    print(f"[+] {timestamp} - {ip} ({id})")
-    return "Loading..."
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=PORT)
+while true; do  
+  {  
+    echo -e "HTTP/1.1 200 OK\r\nContent-Length: 9\r\n\r\nLoading..."  
+    IP=$(echo $SOCAT_PEERADDR | cut -d':' -f4)  
+    UA=$(grep -m 1 'User-Agent:' | sed 's/User-Agent: //')  
+    echo "$(date '+%Y-%m-%d %H:%M:%S') | ${IP} | ${UA}" >> ips.log  
+    echo -e "\e[1;35m[+] ${IP} connected!\e[0m"  
+  } | socat -d -d -lf /dev/null TCP-LISTEN:${PORT},reuseaddr,fork -  
+done  
